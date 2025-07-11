@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Political Contradiction Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card-bg {
+            background-color: #1a202c; /* Slightly lighter than the body */
+        }
+        .modal-bg {
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        .statement-block {
+            border-left: 4px solid #4a5568;
+        }
+        .action-block {
+            border-left: 4px solid #a0aec0;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .pagination-btn {
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .pagination-btn.active {
+            background-color: #4299e1;
+            color: white;
+            border-color: #4299e1;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-white">Political Contradiction Visualizer</h1>
+            <p class="text-gray-400 mt-2">Exploring shifts in statements and actions of public figures.</p>
+            <p class="text-xs text-gray-500 mt-2">(Using a real-world, illustrative dataset)</p>
+        </header>
+
+        <!-- Filters -->
+        <div id="filters" class="mb-8 p-4 bg-gray-800 rounded-lg shadow-lg">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Search Input -->
+                <div>
+                    <label for="search" class="block text-sm font-medium text-gray-300 mb-1">Search by Name or Keyword</label>
+                    <input type="text" id="search" placeholder="e.g., Donald Trump, trade..." class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                </div>
+                <!-- Filter by Party -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Filter by Party</label>
+                    <div id="party-filters" class="flex space-x-2">
+                        <button data-party="all" class="filter-btn party-btn active flex-grow bg-blue-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-blue-700 transition">All</button>
+                        <button data-party="Democrat" class="filter-btn party-btn flex-grow bg-gray-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-500 transition">Democrat</button>
+                        <button data-party="Republican" class="filter-btn party-btn flex-grow bg-gray-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-500 transition">Republican</button>
+                        <button data-party="Independent" class="filter-btn party-btn flex-grow bg-gray-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-500 transition">Independent</button>
+                    </div>
+                </div>
+                <!-- Filter by Topic -->
+                <div>
+                    <label for="topic-filter" class="block text-sm font-medium text-gray-300 mb-1">Filter by Topic</label>
+                    <select id="topic-filter" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                        <option value="all">All Topics</option>
+                        <!-- Topics will be populated by JS -->
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Grid -->
+        <div id="results-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 min-h-[500px]">
+            <!-- Cards will be injected here by JavaScript -->
+        </div>
+        <div id="no-results" class="text-center py-16 text-gray-500 hidden">
+            <h3 class="text-xl font-semibold">No Matching Contradictions Found</h3>
+            <p>Try adjusting your search or filter criteria.</p>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div id="pagination-controls" class="flex justify-center items-center mt-8 space-x-2">
+            <!-- Pagination buttons will be injected here -->
+        </div>
+    </div>
+
+    <!-- Modal for Detailed View -->
+    <div id="modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4 hidden z-50">
+        <div id="modal-content" class="bg-gray-800 rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto fade-in">
+            <!-- Modal content will be injected here by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // --- DATA SOURCE ---
+        const mockData = [
+            { id: 5, name: "Donald Trump", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=DT", contradictions: [{ topic: "TikTok Ban", statement: "Signed an executive order in 2020 aiming to ban TikTok in the U.S., citing it as a national security threat.", statementDate: "2020-08-06", statementSource: "federalregister.gov/documents/2020/08/11/2020-17699/addressing-the-threat-posed-by-tiktok", action: "Reversed his position in 2024, opposing a congressional bill that would ban or force the sale of TikTok and posting 'SAVE TIKTOK!' on social media.", actionDate: "2024-03-07", actionSource: "cnbc.com/2024/03/11/why-trump-flipped-his-stance-on-a-tiktok-ban.html" }, { topic: "National Debt", statement: "Promised in 2016 to eliminate the national debt 'over a period of eight years.'", statementDate: "2016-04-02", statementSource: "washingtonpost.com/news/on-leadership/wp/2016/04/02/a-transcript-of-donald-trumps-meeting-with-the-washington-post-editorial-board/", action: "Presided over an increase of approximately $7.8 trillion to the national debt during his four-year term, partly due to the Tax Cuts and Jobs Act of 2017.", actionDate: "2017-2021", actionSource: "cbo.gov/publication/57635" }] },
+            { id: 6, name: "Joe Biden", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=JB", contradictions: [{ topic: "Border Security / Asylum", statement: "Campaigned against Trump's 'draconian' immigration policies and promised to restore the asylum system.", statementDate: "2020-08-20", statementSource: "joebiden.com/immigration/", action: "Issued an executive order in 2024 to temporarily shut down asylum requests at the southern border when crossings are high, a move critics compared to Trump-era policies.", actionDate: "2024-06-04", actionSource: "whitehouse.gov/briefing-room/presidential-actions/2024/06/04/a-proclamation-on-securing-the-border/" }] },
+            { id: 7, name: "Kevin McCarthy", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=KM", contradictions: [{ topic: "CHIPS Act / Manufacturing Subsidies", statement: "Voted 'No' on the CHIPS and Science Act, a bill providing $52 billion in subsidies for domestic semiconductor manufacturing.", statementDate: "2022-07-28", statementSource: "clerk.house.gov/Votes/2022/396", action: "Later appeared at an event celebrating a tech hub in his district funded by the CHIPS Act, praising the investment he voted against.", actionDate: "2023-10-24", actionSource: "bakersfield.com/news/local/mccarthy-announces-100-million-for-tech-hub/article_a9b1c9e8-72b7-11ee-8e3a-9b5e3f3a4e9c.html" }] },
+            { id: 4, name: "Barack Obama", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=BO", contradictions: [{ topic: "Same-Sex Marriage", statement: "Stated in 2008: 'I believe that marriage is the union between a man and a woman. For me as a Christian, it's also a sacred union.'", statementDate: "2008-04-13", statementSource: "gq.com/story/obama-on-gay-marriage-a-history", action: "Announced his personal support for same-sex marriage in 2012, stating 'I think same-sex couples should be able to get married.'", actionDate: "2012-05-09", actionSource: "abcnews.go.com/politics/obama-endorses-sex-marriage/story?id=16303243" }] },
+            { id: 8, name: "Lindsey Graham", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=LG", contradictions: [{ topic: "View of Donald Trump", statement: "Called Donald Trump a 'race-baiting, xenophobic, religious bigot' and 'unfit for office' during the 2016 campaign.", statementDate: "2015-12-08", statementSource: "cnn.com/2015/12/08/politics/lindsey-graham-donald-trump-muslims/index.html", action: "Became one of President Trump's staunchest allies and defenders in the Senate, frequently golfing with him and supporting his policies.", actionDate: "2017-2024", actionSource: "nytimes.com/2019/08/01/us/politics/lindsey-graham-trump.html" }] },
+            { id: 9, name: "Kamala Harris", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=KH", contradictions: [{ topic: "Criminal Justice / Busing", statement: "Attacked Joe Biden in a 2019 primary debate for his past opposition to federally mandated busing for school desegregation, saying 'There was a little girl in California who was part of the second class to integrate her public schools, and she was bused to school every day. And that little girl was me.'", statementDate: "2019-06-27", statementSource: "youtube.com/watch?v=pAM2i4-d5aA", action: "Later said she and Biden had a 'misunderstanding' of their positions and joined his ticket as Vice President.", actionDate: "2020-08-12", actionSource: "cbsnews.com/news/kamala-harrs-joe-biden-busing-debate-misunderstanding-stephen-colbert/" }] },
+            { id: 10, name: "Mitch McConnell", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=MM", contradictions: [{ topic: "Jan. 6th Attack Culpability", statement: "Stated on the Senate floor that 'President Trump is practically and morally responsible for provoking the events of' January 6th.", statementDate: "2021-02-13", statementSource: "npr.org/sections/insurrection-at-the-capitol/2021/02/13/967723733/read-mcconnells-remarks-after-voting-to-acquit-trump", action: "Voted to acquit Donald Trump in the subsequent impeachment trial and later endorsed him for President in 2024.", actionDate: "2024-03-06", actionSource: "apnews.com/article/mitch-mcconnell-endorses-donald-trump-president-2024-e8f008f5d0237305d214a1a51270c538" }] },
+            { id: 11, name: "Bernie Sanders", party: "Independent", image: "https://placehold.co/100x100/a0aec0/ffffff?text=BS", contradictions: [{ topic: "Senate Filibuster", statement: "Defended the filibuster in 2019, stating that its elimination would mean 'that the progressive agenda would be dead.'", statementDate: "2019-04-10", statementSource: "thehill.com/homenews/senate/438234-sanders-warns-ending-filibuster-could-be-disastrous-for-progressives/", action: "Called for the elimination of the filibuster in 2021 to pass voting rights legislation and other Democratic priorities.", actionDate: "2021-03-24", actionSource: "axios.com/2021/03/24/bernie-sanders-filibuster-voting-rights" }] },
+            { id: 12, name: "Hillary Clinton", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=HC", contradictions: [{ topic: "Trade (TPP)", statement: "As Secretary of State, called the Trans-Pacific Partnership (TPP) the 'gold standard' of trade deals.", statementDate: "2012-11-15", statementSource: "foreignpolicy.com/2016/06/29/hillary-clinton-tpp-trade-deal-gold-standard-donald-trump-china/", action: "Opposed the TPP during her 2016 presidential campaign, stating 'I oppose it now, I'll oppose it after the election, and I'll oppose it as president.'", actionDate: "2016-08-11", actionSource: "politico.com/story/2016/08/hillary-clinton-tpp-226925" }] },
+            { id: 13, name: "Marco Rubio", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=MR", contradictions: [{ topic: "Immigration Reform", statement: "Was a key member of the 'Gang of Eight,' co-authoring a 2013 comprehensive immigration reform bill that included a pathway to citizenship.", statementDate: "2013-06-27", statementSource: "congress.gov/bill/113th-congress/senate-bill/744", action: "Later distanced himself from the bill and adopted a much harder-line stance, emphasizing border security over a pathway to citizenship.", actionDate: "2016-01-28", actionSource: "cnn.com/2016/01/28/politics/marco-rubio-immigration-gang-of-eight/index.html" }] },
+            { id: 14, name: "Ted Cruz", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=TC", contradictions: [{ topic: "Disaster Relief", statement: "Voted against a $50.5 billion federal aid package for victims of Hurricane Sandy in 2013, arguing it was 'filled with unrelated pork.'", statementDate: "2013-01-28", statementSource: "cruz.senate.gov/newsroom/press-releases/sen-cruz-statement-regarding-hurricane-sandy-relief-bill", action: "Strongly advocated for and requested federal disaster aid for Texas following Hurricane Harvey in 2017.", actionDate: "2017-08-30", actionSource: "thehill.com/homenews/senate/348615-cruz-defends-reversal-on-disaster-relief-funding/" }] },
+            { id: 15, name: "Chuck Schumer", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=CS", contradictions: [{ topic: "Supreme Court Filibusters", statement: "Led filibusters against several of George W. Bush's judicial nominees, stating it was a necessary check on power.", statementDate: "2003-11-14", statementSource: "c-span.org/video/?179261-1/senate-judicial-nominations", action: "Criticized Republicans for using the 'nuclear option' to eliminate the 60-vote threshold for Supreme Court nominees in 2017, a standard he previously worked to uphold for his party's benefit.", actionDate: "2017-04-06", actionSource: "washingtonpost.com/powerpost/senate-poised-to-go-nuclear-to-confirm-gorsuch-a-move-with-long-term-consequences/2017/04/05/b5a3e5d4-1a13-11e7-855e-4824bbb5d748_story.html" }] },
+            { id: 16, name: "Ron DeSantis", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=RD", contradictions: [{ topic: "COVID-19 Vaccines", statement: "Initially promoted COVID-19 vaccines in Florida, holding events at vaccination sites and praising the Trump administration's Operation Warp Speed.", statementDate: "2021-01-06", statementSource: "flgov.com/2021/01/06/governor-ron-desantis-highlights-successful-covid-19-vaccination-efforts-for-seniors-in-broward-county/", action: "Later became a prominent critic of vaccine mandates and launched a petition to 'investigate any and all wrongdoing' with respect to the vaccines.", actionDate: "2022-12-13", actionSource: "nbcnews.com/politics/2024-election/desantis-escalates-war-covid-vaccine-makers-he-prepares-2024-run-rcna61591" }] },
+            { id: 17, name: "Elizabeth Warren", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=EW", contradictions: [{ topic: "Super PACs", statement: "Swore off big-money fundraisers and Super PACs during the 2020 Democratic primary, stating 'I don't take money from federal lobbyists. I don't take money from PACs.'", statementDate: "2019-02-25", statementSource: "medium.com/@teamwarren/no-financial-conflicts-of-interest-for-my-campaign-e505f019615a", action: "Benefited from a Super PAC, Persist PAC, which spent millions in support of her candidacy later in the primary.", actionDate: "2020-02-20", actionSource: "nytimes.com/2020/02/20/us/politics/elizabeth-warren-super-pac.html" }] },
+            { id: 18, name: "J.D. Vance", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=JDV", contradictions: [{ topic: "View of Donald Trump", statement: "Was a vocal critic in 2016, reportedly calling Trump 'America's Hitler' and an 'idiot'.", statementDate: "2016-07-21", statementSource: "theguardian.com/us-news/2021/jul/16/jd-vance-trump-criticism-senate-ohio", action: "Actively sought and received Trump's endorsement for his 2022 Senate race, becoming a staunch supporter and defender.", actionDate: "2022-04-15", actionSource: "axios.com/2022/04/15/trump-endorses-jd-vance-ohio-senate" }] },
+            { id: 19, name: "Nancy Pelosi", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=NP", contradictions: [{ topic: "Impeachment", statement: "Expressed reluctance to pursue impeachment against Donald Trump in early 2019, stating 'Impeachment is so divisive to the country that unless there’s something so compelling and overwhelming and bipartisan, I don’t think we should go down that path.'", statementDate: "2019-03-11", statementSource: "washingtonpost.com/politics/pelosi-impeaching-trump-is-not-worth-it/2019/03/11/8474953c-4421-11e9-aaf8-4512a6fe3439_story.html", action: "Announced and led the formal impeachment inquiry against President Trump later that year.", actionDate: "2019-09-24", actionSource: "npr.org/2019/09/24/763965932/house-speaker-nancy-pelosi-to-make-statement-on-impeachment-inquiry-of-trump" }] },
+            { id: 20, name: "Mitt Romney", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=MR", contradictions: [{ topic: "Healthcare Mandate", statement: "As Governor of Massachusetts, signed a 2006 healthcare reform law that included a mandate for individuals to have health insurance.", statementDate: "2006-04-12", statementSource: "nbcnews.com/id/wbna12289299", action: "As a 2012 presidential candidate, campaigned against the Affordable Care Act (Obamacare), a law which was modeled on his Massachusetts plan and also included a federal individual mandate.", actionDate: "2012-05-29", actionSource: "wsj.com/articles/SB10001424052702303506404577434133448415354" }] },
+            { id: 21, name: "John Kerry", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=JK", contradictions: [{ topic: "Iraq War Funding", statement: "Voted for an $87 billion supplemental appropriations bill for military operations in Iraq and Afghanistan.", statementDate: "2003-10-16", statementSource: "senate.gov/legislative/LIS/roll_call_lists/roll_call_vote_cfm.cfm?congress=108&session=1&vote=00383", action: "Later gave a widely-publicized quote explaining his vote against a different version of the bill: 'I actually did vote for the $87 billion before I voted against it.'", actionDate: "2004-03-16", actionSource: "cnn.com/2004/ALLPOLITICS/03/16/kerry.iraq/" }] },
+            { id: 22, name: "George H.W. Bush", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=GHWB", contradictions: [{ topic: "Taxes", statement: "Famously pledged at the 1988 Republican National Convention: 'Read my lips: no new taxes.'", statementDate: "1988-08-18", statementSource: "youtube.com/watch?v=M6Mws4fV2tM", action: "Signed a 1990 budget deal with Democrats that included increases in several existing taxes to address the growing deficit.", actionDate: "1990-11-05", actionSource: "latimes.com/archives/la-xpm-1990-11-06-mn-3825-story.html" }] },
+            { id: 23, name: "Alexandria Ocasio-Cortez", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=AOC", contradictions: [{ topic: "Labor Strikes", statement: "Voiced strong support for railroad workers' right to strike for paid sick leave, tweeting 'I stand with Railroad Workers.'", statementDate: "2022-11-30", statementSource: "twitter.com/AOC/status/1598099189392244736", action: "Voted for legislation that forced railroad workers to accept a contract from management without paid sick days, averting a strike.", actionDate: "2022-12-01", actionSource: "clerk.house.gov/Votes/2022/509" }] },
+            { id: 24, name: "Kyrsten Sinema", party: "Independent", image: "https://placehold.co/100x100/a0aec0/ffffff?text=KS", contradictions: [{ topic: "Senate Filibuster", statement: "As a Green Party activist and politician, she criticized the filibuster as a tool of obstruction.", statementDate: "2003-01-01", statementSource: "azcentral.com/story/news/politics/arizona/2021/06/15/kyrsten-sinemas-past-progressivism-haunts-her-filibuster-stance/7689874002/", action: "As a U.S. Senator, became one of the filibuster's most ardent defenders, refusing to change the rule to pass Democratic priorities like voting rights.", actionDate: "2022-01-13", actionSource: "npr.org/2022/01/13/1072844111/sinema-doubles-down-on-her-support-for-the-filibuster-in-a-senate-floor-speech" }] },
+            { id: 25, name: "Mike Johnson", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=MJ", contradictions: [{ topic: "Ukraine Aid", statement: "Voted against multiple aid packages for Ukraine, including a May 2022 package, citing lack of oversight and fiscal concerns.", statementDate: "2022-05-10", statementSource: "clerk.house.gov/Votes/2022/145", action: "As Speaker of the House, he brought a $61 billion aid package for Ukraine to the floor and voted for it, stating 'I think providing lethal aid to Ukraine right now is critically important.'", actionDate: "2024-04-20", actionSource: "cnn.com/2024/04/20/politics/house-passes-ukraine-israel-taiwan-aid/index.html" }] },
+            { id: 26, name: "Elise Stefanik", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=ES", contradictions: [{ topic: "View of Donald Trump", statement: "During Trump's 2016 campaign, she was critical, saying he was 'insulting to women' and that she disagreed with his rhetoric.", statementDate: "2016-10-08", statementSource: "archive.wfae.org/post/stefanik-will-vote-trump-disagrees-his-comments-about-women", action: "Evolved into one of Trump's most fervent defenders, becoming the House Republican Conference Chair and a leading surrogate for his 2024 campaign.", actionDate: "2021-Present", actionSource: "nytimes.com/2021/05/05/us/politics/elise-stefanik-liz-cheney.html" }] },
+            { id: 27, name: "Josh Hawley", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=JH", contradictions: [{ topic: "Free Trade", statement: "In a 2018 debate, stated 'I am a free trader. I believe in free trade.'", statementDate: "2018-10-18", statementSource: "stltoday.com/news/local/govt-and-politics/hawley-mccaskill-clash-on-health-care-tariffs-in-final-debate/article_18b5e9d9-2e3b-55c3-8a3c-1b7f2323e0c7.html", action: "Became a leading advocate for economic nationalism, championing tariffs and criticizing the 'failed free-trade consensus.'", actionDate: "2021-04-28", actionSource: "hawley.senate.gov/hawley-delivers-senate-floor-speech-bipartisan-endless-frontier-act" }] },
+            { id: 28, name: "Gavin Newsom", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=GN", contradictions: [{ topic: "COVID-19 Rules", statement: "Implemented some of the nation's strictest COVID-19 rules, including a ban on multi-household gatherings and indoor dining.", statementDate: "2020-11-16", statementSource: "covid19.ca.gov/safely-reopening/", action: "Attended a maskless, multi-household birthday dinner at the exclusive French Laundry restaurant during a COVID-19 surge, violating the spirit of his own guidelines.", actionDate: "2020-11-06", actionSource: "apnews.com/article/gavin-newsom-french-laundry-recall-b9472ac7a8631b332058e7852e646270" }] },
+            { id: 29, name: "Tim Scott", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=TS", contradictions: [{ topic: "View of Donald Trump", statement: "After the Jan. 6th attack, he held Trump responsible, saying 'I think he is responsible for it.'", statementDate: "2021-01-07", statementSource: "postandcourier.com/politics/tim-scott-says-trumps-actions-indefensible-after-mob-storms-us-capitol/article_3f3a8f5c-5136-11eb-a6b1-9f201e74a58b.html", action: "Endorsed Donald Trump for president in 2024, calling him the candidate who will 'unite our country.'", actionDate: "2024-01-19", actionSource: "cnn.com/2024/01/19/politics/tim-scott-endorses-donald-trump/index.html" }] },
+            { id: 30, name: "Nikki Haley", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=NH", contradictions: [{ topic: "View of Donald Trump", statement: "After Jan 6th, said Trump 'let us down. He went down a path he shouldn’t have, and we shouldn’t have followed him.'", statementDate: "2021-01-12", statementSource: "politico.com/news/2021/01/12/nikki-haley-trump-jan-6-458369", action: "Later stated she would vote for Trump in the 2024 election and called on him to earn the support of her voters.", actionDate: "2024-05-22", actionSource: "apnews.com/article/nikki-haley-donald-trump-2024-election-republican-3a3a25c0a3733361183307222301c514" }] },
+            { id: 31, name: "Chris Christie", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=CC", contradictions: [{ topic: "View of Donald Trump", statement: "Was the first major 2016 candidate to endorse Donald Trump and led his transition team.", statementDate: "2016-02-26", statementSource: "nytimes.com/2016/02/27/us/politics/chris-christie-endorses-donald-trump.html", action: "Became one of Trump's most vocal critics, calling him a 'failed leader' and 'a coward' during his own 2024 presidential campaign.", actionDate: "2023-06-06", actionSource: "nbcnews.com/politics/2024-election/chris-christie-announces-presidential-campaign-rcna87910" }] },
+            { id: 32, name: "Kirsten Gillibrand", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=KG", contradictions: [{ topic: "Gun Control", statement: "As a House member representing an upstate NY district, she held an 'A' rating from the NRA and opposed a federal assault weapons ban.", statementDate: "2008-10-15", statementSource: "politifact.com/factchecks/2018/feb/22/kirsten-gillibrand/kirsten-gillibrands-shift-gun-rights/", action: "As a Senator, she has a 100% rating from gun control groups and is a leading advocate for stricter gun laws, including a ban on assault weapons.", actionDate: "2013-Present", actionSource: "gillibrand.senate.gov/issues/gun-safety/" }] },
+            { id: 33, name: "John Fetterman", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=JF", contradictions: [{ topic: "Israel-Palestine Conflict", statement: "Campaigned as a standard progressive, aligning with figures like Bernie Sanders and the party's left wing on most issues.", statementDate: "2022-05-17", statementSource: "theintercept.com/2022/05/17/john-fetterman-pennsylvania-senate-primary/", action: "Became one of the most hawkish pro-Israel Democrats in the Senate after the Oct. 7 attack, breaking sharply with progressives by opposing a ceasefire and criticizing protesters.", actionDate: "2023-Present", actionSource: "nytimes.com/2024/02/05/us/politics/fetterman-israel-progressives.html" }] },
+            { id: 34, name: "Katie Porter", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=KP", contradictions: [{ topic: "Corporate PAC Money", statement: "Built her political brand on refusing corporate PAC money, stating 'I don't take a dime of corporate PAC money. Not one dime.'", statementDate: "2018-07-01", statementSource: "twitter.com/katieporteroc/status/1013488258206900224", action: "During her 2024 Senate campaign, accepted millions in support from a Super PAC funded by large, often anonymous donations, including from individuals in the finance industry.", actionDate: "2024-02-15", actionSource: "calmatters.org/politics/2024/02/katie-porter-super-pac/" }] },
+            { id: 35, name: "Adam Schiff", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=AS", contradictions: [{ topic: "NSA Surveillance (FISA)", statement: "Voted to reauthorize Section 702 of the Foreign Intelligence Surveillance Act (FISA) in 2018, a key tool for warrantless surveillance.", statementDate: "2018-01-11", statementSource: "clerk.house.gov/Votes/2018/25", action: "Voted against the reauthorization of FISA in 2024, citing a need for a warrant requirement and reforms to protect Americans' privacy.", actionDate: "2024-04-12", actionSource: "schiff.house.gov/news/press-releases/schiff-statement-on-fisa-reauthorization-vote" }] },
+            { id: 36, name: "Rand Paul", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=RP", contradictions: [{ topic: "Foreign Aid", statement: "Has consistently been one of the Senate's most vocal opponents of foreign aid, introducing amendments to cut it from nearly every spending bill.", statementDate: "Ongoing", statementSource: "paul.senate.gov/op_eds/gleaner-op-ed-sen-rand-paul-taxes-should-go-toward-projects-i-69-not-foreign-aid/", action: "Voted for a 2024 national security supplemental bill that included over $60 billion in aid for Ukraine and $14 billion for Israel.", actionDate: "2024-04-23", actionSource: "senate.gov/legislative/LIS/roll_call_lists/roll_call_vote_cfm.cfm?congress=118&session=2&vote=00151" }] },
+            { id: 37, name: "Marjorie Taylor Greene", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=MTG", contradictions: [{ topic: "Kevin McCarthy Speakership", statement: "Was a staunch ally of Kevin McCarthy during the January 2023 Speaker election, urging her colleagues to support him.", statementDate: "2023-01-04", statementSource: "thehill.com/homenews/house/3800201-greene-slams-anti-mccarthy-republicans-for-playing-russian-roulette-with-gop-majority/", action: "Voted with Matt Gaetz and Democrats to oust Kevin McCarthy from the Speakership.", actionDate: "2023-10-03", actionSource: "clerk.house.gov/Votes/2023/505" }] },
+            { id: 38, name: "Hakeem Jeffries", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=HJ", contradictions: [{ topic: "Progressive Politics", statement: "In a 2016 interview, drew a sharp distinction between his positions and the 'super-left,' stating 'there will never be a moment where I bend the knee to the hard left.'", statementDate: "2016-07-26", statementSource: "theintercept.com/2022/12/01/hakeem-jeffries-democrats-aoc/", action: "As House Democratic Leader, he has largely unified the caucus, working closely with and promoting members of the Congressional Progressive Caucus.", actionDate: "2023-Present", actionSource: "nytimes.com/2023/01/07/us/politics/hakeem-jeffries-house-democrats.html" }] },
+            { id: 39, name: "Dan Crenshaw", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=DC", contradictions: [{ topic: "Red Flag Laws", statement: "After a 2019 mass shooting, expressed openness to 'red flag' laws, stating 'The idea is to separate a person from a weapon for a temporary amount of time... I'm not opposed to that.'", statementDate: "2019-09-08", statementSource: "houstonchronicle.com/politics/texas/article/Crenshaw-says-he-s-not-opposed-to-red-flag-14423851.php", action: "Later introduced the 'Preventing Unjust Red Flag Laws Act' to prohibit federal funding for the implementation of such laws.", actionDate: "2025-01-07", actionSource: "crenshaw.house.gov/2025/1/crenshaw-introduces-bill-preventing-unjust-red-flag-laws" }] },
+            { id: 40, name: "Vivek Ramaswamy", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=VR", contradictions: [{ topic: "View of Donald Trump", statement: "During his 2024 presidential campaign, he praised Donald Trump as 'the best president of the 21st century.'", statementDate: "2023-08-23", statementSource: "thehill.com/homenews/campaign/4167396-vivek-ramaswamy-calls-trump-the-best-president-of-the-21st-century/", action: "After dropping out, he began criticizing Trump's policy decisions, such as the COVID-19 response and adding to the national debt.", actionDate: "2024-02-15", actionSource: "businessinsider.com/vivek-ramaswamy-criticizes-trump-debt-covid-after-dropping-out-2024-2" }] },
+            { id: 41, name: "Pramila Jayapal", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=PJ", contradictions: [{ topic: "Israel-Palestine Conflict", statement: "Referred to Israel as a 'racist state' at a conference.", statementDate: "2023-07-15", statementSource: "timesofisrael.com/progressive-us-lawmaker-pramila-jayapal-calls-israel-a-racist-state/", action: "Walked back the comments after backlash from colleagues, stating 'I do not believe the idea of Israel as a nation is racist.'", actionDate: "2023-07-16", actionSource: "cnn.com/2023/07/16/politics/pramila-jayapal-israel-racist-state/index.html" }] },
+            { id: 42, name: "Tom Cotton", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=TC", contradictions: [{ topic: "Criminal Justice Reform", statement: "Was a vocal opponent of the First Step Act, a bipartisan criminal justice reform bill, calling it a 'jailbreak' that would release violent felons.", statementDate: "2018-12-18", statementSource: "cotton.senate.gov/news/press-releases/cotton-statement-on-first-step-act-vote", action: "Later praised the Trump administration for signing the First Step Act into law.", actionDate: "2019-04-01", actionSource: "youtube.com/watch?v=s-Vz0b_Y_w8" }] },
+            { id: 43, name: "Cory Booker", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=CB", contradictions: [{ topic: "Pharmaceutical Industry", statement: "As a presidential candidate, he unveiled a plan to create a government agency to determine 'fair prices' for prescription drugs and attacked the industry's profits.", statementDate: "2019-11-15", statementSource: "booker.senate.gov/news/press/booker-unveils-groundbreaking-bill-establishing-national-drug-pricing-agency-to-lower-costs-increase-access", action: "Has historically been one of the top recipients of campaign donations from the pharmaceutical industry.", actionDate: "Career", actionSource: "opensecrets.org/industries/recips.php?ind=H04" }] },
+            { id: 44, name: "Amy Klobuchar", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=AK", contradictions: [{ topic: "Supreme Court Nominations", statement: "Voted against the confirmation of Justice Neil Gorsuch, citing concerns about his judicial philosophy and the process.", statementDate: "2017-04-07", statementSource: "klobuchar.senate.gov/public/index.cfm/2017/4/klobuchar-statement-on-vote-against-supreme-court-nominee-neil-gorsuch", action: "Voted to confirm Justice Brett Kavanaugh despite similar and more widespread concerns from her party about his record and temperament.", actionDate: "2018-10-06", actionSource: "senate.gov/legislative/LIS/roll_call_lists/roll_call_vote_cfm.cfm?congress=115&session=2&vote=00223" }] },
+            { id: 45, name: "Pete Buttigieg", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=PB", contradictions: [{ topic: "Healthcare", statement: "Campaigned for president on a 'Medicare for All Who Want It' plan, which included a public health insurance option but preserved private insurance.", statementDate: "2019-09-12", statementSource: "npr.org/2019/09/12/760431333/buttigieg-defends-medicare-for-all-who-want-it-plan-at-democratic-debate", action: "Previously indicated support for a single-payer 'Medicare for All' system, tweeting in 2018 'I, Pete Buttigieg, politician, do henceforth and forthwith declare, most affirmatively and indubitably, that I am for Medicare for All.'", actionDate: "2018-02-18", actionSource: "thehill.com/homenews/campaign/479038-buttigieg-confronted-with-2018-tweet-supporting-medicare-for-all/" }] },
+            { id: 46, name: "Matt Gaetz", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=MG", contradictions: [{ topic: "Kevin McCarthy Speakership", statement: "Nominated Donald Trump for Speaker of the House during the January 2023 votes, withholding his vote from Kevin McCarthy.", statementDate: "2023-01-05", statementSource: "thehill.com/homenews/house/3799661-gaetz-nominates-trump-for-speaker/", action: "On the 15th and final ballot, he switched his vote to 'present,' lowering the threshold and allowing McCarthy to win the speakership.", actionDate: "2023-01-07", actionSource: "cnn.com/2023/01/06/politics/house-speaker-vote-mccarthy-republicans/index.html" }] },
+            { id: 47, name: "Tulsi Gabbard", party: "Independent", image: "https://placehold.co/100x100/a0aec0/ffffff?text=TG", contradictions: [{ topic: "View of Bashar al-Assad", statement: "As a Democrat, she was heavily criticized for a 2017 meeting with Syrian dictator Bashar al-Assad and for casting doubt on his use of chemical weapons.", statementDate: "2017-01-25", statementSource: "cnn.com/2017/01/25/politics/tulsi-gabbard-syria-assad/index.html", action: "After leaving the Democratic party, she became a paid contributor on Fox News, where she continued to express views that were often seen as apologetic to authoritarian regimes.", actionDate: "2022-Present", actionSource: "theguardian.com/us-news/2022/oct/12/tulsi-gabbard-fox-news-contributor-democrats" }] },
+            { id: 48, name: "Kristi Noem", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=KN", contradictions: [{ topic: "Transgender Sports Ban", statement: "Celebrated a bill to ban transgender girls and women from female sports, tweeting 'In South Dakota, we're celebrating #InternationalWomensDay by defending women's sports!'", statementDate: "2021-03-08", statementSource: "twitter.com/govkristinoem/status/1368975932523769856", action: "Vetoed the bill after facing pressure from business groups and the NCAA, citing concerns about potential economic backlash.", actionDate: "2021-03-19", actionSource: "npr.org/2021/03/20/979633932/south-dakota-gov-kristi-noem-rejects-bill-banning-transgender-women-from-female" }] },
+            { id: 49, name: "Ron Johnson", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=RJ", contradictions: [{ topic: "Term Limits", statement: "Pledged in 2010 that he would only serve two terms in the Senate if elected.", statementDate: "2010-10-08", statementSource: "jsonline.com/story/news/politics/2021/04/08/ron-johnson-says-his-two-term-pledge-preference/7144214002/", action: "Ran for and won a third term in 2022, stating his initial pledge was a 'preference' rather than a firm promise.", actionDate: "2022-01-09", actionSource: "nbcnews.com/politics/2022-election/gop-sen-ron-johnson-announces-re-election-bid-breaking-two-n1287232" }] },
+            { id: 50, name: "Susan Collins", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=SC", contradictions: [{ topic: "Abortion Rights (Roe v. Wade)", statement: "Justified her vote to confirm Justice Brett Kavanaugh by saying he told her he considered Roe v. Wade to be 'settled law.'", statementDate: "2018-10-05", statementSource: "cnn.com/2018/10/05/politics/susan-collins-kavanaugh-speech-transcript/index.html", action: "Expressed surprise and disappointment when Justice Kavanaugh voted with the majority to overturn Roe v. Wade, a decision she called 'inconsistent with what he said in his hearings.'", actionDate: "2022-06-24", actionSource: "collins.senate.gov/newsroom/senator-collins-statement-on-supreme-court-decision-in-dobbs-v-jackson-womens-health-organization" }] },
+            { id: 51, name: "Joe Manchin", party: "Independent", image: "https://placehold.co/100x100/a0aec0/ffffff?text=JM", contradictions: [{ topic: "Build Back Better Act", statement: "Announced he was a definitive 'no' on President Biden's Build Back Better social spending and climate plan, effectively killing the legislation.", statementDate: "2021-12-19", statementSource: "foxnews.com/politics/manchin-says-he-is-a-no-on-build-back-better-i-cannot-vote-for-it", action: "Weeks later, he negotiated and became the key vote for the Inflation Reduction Act, a scaled-down version of Build Back Better that contained many of the same climate and healthcare provisions.", actionDate: "2022-07-27", actionSource: "nytimes.com/2022/07/27/us/politics/manchin-schumer-climate-tax-deal.html" }] },
+            { id: 52, name: "Jeff Van Drew", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=JVD", contradictions: [{ topic: "Party Affiliation", statement: "As a Democrat, he was one of only two in his party to vote against opening an impeachment inquiry into Donald Trump, stating he did not believe it was the right course of action.", statementDate: "2019-10-31", statementSource: "clerk.house.gov/Votes/2019/604", action: "Shortly after, he switched parties and became a Republican, pledging his 'undying support' to President Trump at a White House meeting.", actionDate: "2019-12-19", actionSource: "cnn.com/2019/12/19/politics/jeff-van-drew-republican-trump/index.html" }] },
+            { id: 53, name: "Justin Amash", party: "Independent", image: "https://placehold.co/100x100/a0aec0/ffffff?text=JA", contradictions: [{ topic: "Impeachment", statement: "As a Republican, became the first member of his party to call for President Trump's impeachment based on the Mueller report.", statementDate: "2019-05-18", statementSource: "twitter.com/justinamash/status/1129848974888435712", action: "Left the Republican party to become an Independent, and later voted to impeach Donald Trump.", actionDate: "2019-12-18", actionSource: "clerk.house.gov/Votes/2019/695" }] },
+            { id: 54, name: "Markwayne Mullin", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=MM", contradictions: [{ topic: "Union Rights", statement: "Challenged Teamsters President Sean O'Brien to a physical fight during a Senate hearing, stating 'This is a time, this is a place. If you want to run your mouth, we can be two consenting adults. We can finish it here.'", statementDate: "2023-11-14", statementSource: "thehill.com/homenews/senate/4309320-mullin-teamsters-obrien-fight-senate-hearing/", action: "As a business owner before entering Congress, his company was cited multiple times by the National Labor Relations Board for unfair labor practices and for failing to pay into union pension funds.", actionDate: "2011-2012", actionSource: "theintercept.com/2022/08/04/markwayne-mullin-oklahoma-senate-plumbing/" }] },
+            { id: 55, name: "John Cornyn", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=JC", contradictions: [{ topic: "Gun Control", statement: "Has an 'A+' rating from the NRA and a long record of opposing gun control measures.", statementDate: "Career", statementSource: "ontheissues.org/TX/John_Cornyn_Gun_Control.htm", action: "Was the lead Republican negotiator for the Bipartisan Safer Communities Act, the most significant federal gun safety legislation in nearly 30 years, which included enhanced background checks and 'red flag' law funding.", actionDate: "2022-06-21", actionSource: "texastribune.org/2022/06/21/john-cornyn-gun-bill-senate/" }] },
+            { id: 56, name: "Rick Scott", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=RS", contradictions: [{ topic: "Social Security & Medicare", statement: "Released an 11-point 'Rescue America' plan that proposed all federal legislation, including Social Security and Medicare, should sunset every five years, requiring reauthorization.", statementDate: "2022-02-22", statementSource: "rescueamerica.com/11-point-plan/", action: "After facing intense criticism, he revised the plan to specifically exempt Social Security, Medicare, and other national security programs from the sunset provision.", actionDate: "2023-02-17", actionSource: "washingtonpost.com/politics/2023/02/17/rick-scott-medicare-social-security/" }] },
+            { id: 57, name: "Ro Khanna", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=RK", contradictions: [{ topic: "Big Tech", statement: "Represents Silicon Valley and often speaks about the promise of the tech sector, while also being a nuanced critic of its largest companies.", statementDate: "Ongoing", statementSource: "khanna.house.gov/media/press-releases/rep-khanna-statement-house-judiciary-antitrust-report", action: "Authored a book, 'Dignity in a Digital Age,' that argues for decentralizing digital jobs and spreading tech wealth, a position that can be at odds with the centralized business models of his largest constituents.", actionDate: "2022-02-01", actionSource: "simonandschuster.com/books/Dignity-in-a-Digital-Age/Ro-Khanna/9781982164868" }] },
+            { id: 58, name: "Byron Donalds", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=BD", contradictions: [{ topic: "Election Certification", statement: "Voted to object to the certification of the 2020 election results from Arizona and Pennsylvania.", statementDate: "2021-01-06", statementSource: "clerk.house.gov/Votes/2021/11", action: "During the 2023 Speaker contest, he initially voted against Kevin McCarthy but later switched his vote, helping to certify McCarthy's election as Speaker.", actionDate: "2023-01-06", actionSource: "thehill.com/homenews/house/3802952-byron-donalds-flips-vote-to-mccarthy-for-speaker/" }] },
+            { id: 59, name: "Pramila Jayapal", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=PJ", contradictions: [{ topic: "Medicare for All", statement: "Is the lead sponsor of the Medicare for All Act in the House, which would create a single-payer healthcare system and eliminate most private insurance.", statementDate: "Ongoing", statementSource: "jayapal.house.gov/medicare-for-all/", action: "Voted for the Affordable Care Act enhancement provisions in the Inflation Reduction Act, which expanded subsidies for private insurance plans on the ACA marketplace.", actionDate: "2022-08-12", actionSource: "clerk.house.gov/Votes/2022/420" }] },
+            { id: 60, name: "Mike Pence", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=MP", contradictions: [{ topic: "View of Donald Trump", statement: "Served as a loyal Vice President for four years, consistently praising and defending President Trump.", statementDate: "2017-2021", statementSource: "bbc.com/news/election-us-2020-54439334", action: "After the Jan. 6th attack, he stated Trump's 'reckless words endangered my family' and that 'history will hold Donald Trump accountable.' He later refused to endorse Trump for president in 2024.", actionDate: "2024-03-15", actionSource: "nbcnews.com/politics/2024-election/mike-pence-says-will-not-endorse-donald-trump-2024-election-rcna143657" }] },
+            { id: 61, name: "Gretchen Whitmer", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=GW", contradictions: [{ topic: "COVID-19 Restrictions", statement: "Implemented some of the nation's strictest COVID-19 lockdown orders, including closing businesses and limiting travel within the state.", statementDate: "2020-04-09", statementSource: "michigan.gov/whitmer/news/press-releases/2020/04/09/governor-whitmer-signs-new-executive-order-temporarily-restricting-non-essential-travel", action: "Was criticized after her husband reportedly invoked his wife's name in an attempt to get his boat in the water ahead of others during the lockdown.", actionDate: "2020-05-26", actionSource: "detroitnews.com/story/news/local/michigan/2020/05/26/whitmers-husband-dropped-her-name-get-boat-water/5263024002/" }] },
+            { id: 62, name: "Kari Lake", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=KL", contradictions: [{ topic: "2020 Election", statement: "Built her political career on the false claim that the 2020 election was stolen from Donald Trump, calling it 'corrupt' and 'rotten to the core.'", statementDate: "2022-10-16", statementSource: "cbsnews.com/news/kari-lake-arizona-governor-2022-midterm-elections-60-minutes/", action: "When asked in a 2024 interview if her previous claims were a mistake, she said 'we're moving forward' and pivoted to other topics, refusing to stand by her past statements.", actionDate: "2024-06-23", actionSource: "thehill.com/homenews/campaign/4735234-kari-lake-dodges-on-whether-shell-accept-2024-results/" }] },
+            { id: 63, name: "Chris Murphy", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=CM", contradictions: [{ topic: "Gun Control Filibuster", statement: "Led a nearly 15-hour filibuster in 2016 to demand votes on gun control measures.", statementDate: "2016-06-15", statementSource: "kaine.senate.gov/in-the-news/the-7-most-powerful-quotes-from-senator-chris-murphys-gun-control-filibuster", action: "Later voted to change Senate rules to lower the confirmation threshold for Supreme Court justices, a move that weakened the power of the filibuster he had utilized.", actionDate: "2017-04-06", actionSource: "senate.gov/legislative/LIS/roll_call_lists/roll_call_vote_cfm.cfm?congress=115&session=1&vote=00106" }] },
+            { id: 64, name: "Ted Budd", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=TB", contradictions: [{ topic: "CHIPS Act", statement: "Urged congressional leaders to provide 'robust funding' for the CHIPS Act to support semiconductor manufacturing in North Carolina.", statementDate: "2022-02-15", statementSource: "budd.house.gov/news/documentsingle.aspx?DocumentID=558", action: "Voted against the final passage of the CHIPS and Science Act.", actionDate: "2022-07-28", actionSource: "clerk.house.gov/Votes/2022/396" }] },
+            { id: 65, name: "Sarah Huckabee Sanders", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=SHS", contradictions: [{ topic: "Lectern Purchase", statement: "Campaigned on fiscal responsibility and fighting government waste.", statementDate: "2022-10-01", statementSource: "sarahforgovernor.com/issues/", action: "As governor, her office purchased a custom lectern for over $19,000, a transaction that drew criticism and a legislative audit for its high cost and unusual procurement process.", actionDate: "2023-06-14", actionSource: "apnews.com/article/arkansas-sanders-lectern-audit-b2d3e5a7d9c6e8e8e1c6e8a4a3e9c7d1" }] },
+            { id: 66, name: "Wes Moore", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=WM", contradictions: [{ topic: "Public Safety", statement: "Campaigned on a comprehensive public safety plan that included both accountability for criminals and investments in prevention.", statementDate: "2022-09-20", statementSource: "wesmoore.com/public-safety/", action: "After taking office, his administration ended a long-standing State Police helicopter patrol program in Baltimore, a move criticized by some as reducing law enforcement presence.", actionDate: "2023-05-01", actionSource: "baltimoresun.com/politics/bs-md-pol-state-police-baltimore-20230501-2j3q4z5x5vfj5n5e6k5d4f3c6y-story.html" }] },
+            { id: 67, name: "Josh Shapiro", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=JS", contradictions: [{ topic: "Energy Policy", statement: "Campaigned on an 'all-of-the-above' energy strategy, including support for natural gas drilling.", statementDate: "2022-10-25", statementSource: "politicspa.com/shapiro-talks-energy-policy-in-washington-county/114949/", action: "As governor, he implemented a new 'Lightning Plan' that heavily prioritizes renewable energy and sets ambitious clean energy targets, a move seen by some as a shift away from fossil fuels.", actionDate: "2025-03-11", actionSource: "pa.gov/governor/newsroom/2025-press-releases/governor-shapiro-launches-legislative-push-for--lightning-plan--.html" }] },
+            { id: 68, name: "Glenn Youngkin", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=GY", contradictions: [{ topic: "Parental Rights in Education", statement: "Made parental rights a cornerstone of his campaign, stating 'Parents should be in charge of their kids' education.'", statementDate: "2021-09-28", statementSource: "foxnews.com/politics/youngkin-parents-kids-education-terry-mcauliffe", action: "Signed a bill that allows parents to opt their children out of sexually explicit instructional materials but vetoed a bill that would have required schools to notify parents of any gender identity changes in their children.", actionDate: "2023-04-12", actionSource: "washingtonpost.com/education/2023/04/12/youngkin-vetoes-transgender-student-parental-notification-bill/" }] },
+            { id: 69, name: "Maura Healey", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=MH", contradictions: [{ topic: "Natural Gas", statement: "As Attorney General, she opposed the construction of new natural gas pipelines, citing climate concerns and costs for ratepayers.", statementDate: "2016-07-28", statementSource: "mass.gov/news/ag-healey-leads-regional-effort-to-oppose-unnecessary-gas-pipeline-tax", action: "As Governor, her administration has approved the expansion of existing natural gas capacity and infrastructure to ensure energy reliability.", actionDate: "2023-11-20", actionSource: "wbur.org/news/2023/11/20/healey-natural-gas-capacity-pipeline- Eversource" }] },
+            { id: 70, name: "Tina Kotek", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=TK", contradictions: [{ topic: "Homelessness", statement: "Declared a homelessness state of emergency on her first day as governor, vowing to take urgent action.", statementDate: "2023-01-10", statementSource: "oregon.gov/gov/priorities/pages/housing-and-homelessness.aspx", action: "Her husband's consulting firm received a contract from a nonprofit that was a major recipient of state funds allocated to address the homelessness crisis, raising conflict of interest concerns.", actionDate: "2024-03-01", actionSource: "oregonlive.com/politics/2024/03/gov-tina-koteks-husbands-consulting-work-for-nonprofit-draws-scrutiny.html" }] },
+            { id: 71, name: "Eric Adams", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=EA", contradictions: [{ topic: "Cryptocurrency", statement: "Vowed to make New York City the 'center of the cryptocurrency industry' and took his first three paychecks in Bitcoin and Ethereum.", statementDate: "2021-11-04", statementSource: "cnbc.com/2021/11/04/nyc-mayor-elect-eric-adams-will-take-his-first-3-paychecks-in-bitcoin.html", action: "Later stated the city is focused on the 'long-term values' of blockchain technology, 'not chasing memes or trends,' a shift in tone after the crypto market crash.", actionDate: "2025-05-12", actionSource: "theblock.co/post/354023/nyc-mayor-eric-adams-wants-long-term-value-with-crypto-not-to-chase-memes" }] },
+            { id: 72, name: "Lauren Boebert", party: "Republican", image: "https://placehold.co/100x100/e53e3e/ffffff?text=LB", contradictions: [{ topic: "Term Limits", statement: "Campaigned as a strong supporter of term limits for members of Congress.", statementDate: "2020-09-29", statementSource: "boebert.house.gov/media/press-releases/congresswoman-boebert-introduces-term-limits-amendment", action: "After winning her primary in a new district, she has not continued to make term limits a central part of her platform.", actionDate: "2024-Present", actionSource: "coloradosun.com/2024/06/26/lauren-boebert-wins-gop-primary-4th-congressional-district/" }] },
+            { id: 73, name: "Ilhan Omar", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=IO", contradictions: [{ topic: "U.S. Foreign Policy", statement: "Has been a fierce critic of U.S. foreign policy, particularly military interventionism and aid to countries like Israel.", statementDate: "Ongoing", statementSource: "omar.house.gov/media/press-releases/rep-omars-statement-israels-attacks-lebanon", action: "Voted in favor of a 2024 national security supplemental bill that included billions in military aid for Ukraine, Israel, and Taiwan.", actionDate: "2024-04-20", actionSource: "clerk.house.gov/Votes/2024/151" }] },
+            { id: 74, name: "Rashida Tlaib", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=RT", contradictions: [{ topic: "Infrastructure Bill", statement: "Initially was one of six progressive Democrats who voted against the Bipartisan Infrastructure Framework because it was delinked from the larger Build Back Better social spending bill.", statementDate: "2021-11-05", statementSource: "clerk.house.gov/Votes/2021/370", action: "Later appeared at events in her district celebrating the funding and projects made possible by the very infrastructure bill she voted against.", actionDate: "2022-08-12", actionSource: "detroitnews.com/story/news/local/detroit-city/2022/08/12/tlaib-touts-infrastructure-bill-she-voted-against-during-biden-visit/65397463007/" }] },
+            { id: 75, name: "Ayanna Pressley", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=AP", contradictions: [{ topic: "Student Debt Cancellation", statement: "Has been a leading advocate for broad-based student debt cancellation via executive action, arguing the President has the authority to cancel it.", statementDate: "Ongoing", statementSource: "pressley.house.gov/2021/02/04/pressley-warren-schumer-colleagues-reintroduce-resolution-calling-on-president-biden-to-tackle-student-loan-debt-crisis-cancel-up-to-50000-for-federal-borrowers/", action: "Praised the Biden administration's more targeted debt relief programs, which fall short of the broad cancellation she has championed, calling them a 'step in the right direction.'", actionDate: "2024-04-08", actionSource: "pressley.house.gov/2024/04/08/pressley-applauds-biden-harris-admin-s-new-student-debt-cancellation-plan/" }] },
+            { id: 76, name: "Cori Bush", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=CB", contradictions: [{ topic: "Defund the Police", statement: "Is a prominent advocate for the 'defund the police' movement, arguing for reallocating police budgets to social services.", statementDate: "2021-08-05", statementSource: "cbsnews.com/news/cori-bush-defund-the-police-private-security/", action: "Has spent hundreds of thousands of dollars in campaign funds on her own private security detail, a move she defends as necessary due to threats against her.", actionDate: "Ongoing", actionSource: "foxnews.com/politics/cori-bush-defund-police-private-security-spending-tops-750k" }] },
+            { id: 77, name: "Jamaal Bowman", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=JB", contradictions: [{ topic: "Charter Schools", statement: "As a middle school principal, he wrote blog posts criticizing charter schools, standardized testing, and Teach for America.", statementDate: "2015-02-24", statementSource: "withabrooklynaccent.blogspot.com/2015/02/bronx-principal-jamaal-bowman-debunks.html", action: "As a congressman, he has voted in favor of funding for charter school programs and has praised some charter networks.", actionDate: "2021-07-28", actionSource: "the74million.org/article/analysis-rep-jamaal-bowman-once-a-charter-school-critic-now-a-supporter-his-evolution-on-school-choice-is-a-sign-of-the-movements-success/" }] },
+            { id: 78, name: "Mondaire Jones", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=MJ", contradictions: [{ topic: "Court Packing", statement: "Co-sponsored the Judiciary Act of 2021, which would expand the Supreme Court from nine to 13 justices, and tweeted 'Supreme Court expansion is infrastructure.'", statementDate: "2021-04-15", statementSource: "newsweek.com/critics-mock-supreme-court-packing-infrastructure-while-democrats-release-plan-1583835", action: "During a 2024 primary debate, he said he no longer supports expanding the court, stating 'I have evolved on this issue... it is not a winning issue.'", actionDate: "2024-05-13", actionSource: "cityandstateny.com/politics/2024/05/mondaire-jones-no-longer-supports-expanding-supreme-court/396553/" }] },
+            { id: 79, name: "Jake Auchincloss", party: "Democrat", image: "https://placehold.co/100x100/3182ce/ffffff?text=JA", contradictions: [{ topic: "Party Affiliation", statement: "Was a registered Republican from 2013 to 2014 and worked on the gubernatorial campaign of Republican Charlie Baker.", statementDate: "2014-11-04", statementSource: "theintercept.com/2020/08/25/jake-auchincloss-massachusetts-primary-republican/", action: "Ran for and won a seat in Congress as a progressive Democrat, securing the endorsement of groups like the Progressive Change Campaign Committee.", actionDate: "2020-09-01", actionSource: "bostonglobe.com/2020/09/04/metro/jake-auchincloss-wins-democratic-primary-4th-district/" }] }
+        ];
+
+        // --- APPLICATION LOGIC ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const resultsGrid = document.getElementById('results-grid');
+            const noResultsDiv = document.getElementById('no-results');
+            const searchInput = document.getElementById('search');
+            const partyFilters = document.getElementById('party-filters');
+            const topicFilter = document.getElementById('topic-filter');
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            const paginationControls = document.getElementById('pagination-controls');
+
+            let currentPage = 1;
+            const itemsPerPage = 18;
+
+            let currentFilters = {
+                search: '',
+                party: 'all',
+                topic: 'all'
+            };
+
+            // --- Flatten Data for easier filtering/pagination ---
+            const allContradictions = mockData.flatMap(politician => 
+                politician.contradictions.map(contradiction => ({
+                    ...contradiction,
+                    politicianId: politician.id,
+                    name: politician.name,
+                    party: politician.party,
+                    image: politician.image
+                }))
+            );
+
+            // --- Populate Topic Filter ---
+            function populateTopics() {
+                const topics = new Set(allContradictions.map(c => c.topic));
+                topicFilter.innerHTML = '<option value="all">All Topics</option>';
+                const sortedTopics = Array.from(topics).sort();
+                sortedTopics.forEach(topic => {
+                    const option = document.createElement('option');
+                    option.value = topic;
+                    option.textContent = topic;
+                    topicFilter.appendChild(option);
+                });
+            }
+
+            // --- Render Function ---
+            function render() {
+                // Apply filters
+                const filteredContradictions = allContradictions.filter(item => {
+                    const partyMatch = currentFilters.party === 'all' || item.party === currentFilters.party;
+                    const topicMatch = currentFilters.topic === 'all' || item.topic === currentFilters.topic;
+                    const searchMatch = currentFilters.search === '' ||
+                        item.name.toLowerCase().includes(currentFilters.search) ||
+                        item.topic.toLowerCase().includes(currentFilters.search) ||
+                        item.statement.toLowerCase().includes(currentFilters.search) ||
+                        item.action.toLowerCase().includes(currentFilters.search);
+                    return partyMatch && topicMatch && searchMatch;
+                });
+
+                // Apply pagination
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = startIndex + itemsPerPage;
+                const paginatedItems = filteredContradictions.slice(startIndex, endIndex);
+
+                // Render cards
+                resultsGrid.innerHTML = '';
+                if (paginatedItems.length > 0) {
+                    paginatedItems.forEach((item, index) => {
+                        const card = document.createElement('div');
+                        card.className = 'card-bg p-5 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer';
+                        
+                        // Find original politician and contradiction index for the modal
+                        const originalPolitician = mockData.find(p => p.id === item.politicianId);
+                        const originalIndex = originalPolitician.contradictions.findIndex(c => c.statement === item.statement);
+                        
+                        card.dataset.politicianId = item.politicianId;
+                        card.dataset.contradictionIndex = originalIndex;
+
+                        let partyColor = 'bg-gray-500';
+                        if (item.party === 'Democrat') partyColor = 'bg-blue-500';
+                        if (item.party === 'Republican') partyColor = 'bg-red-500';
+                        if (item.party === 'Independent') partyColor = 'bg-purple-500';
+
+                        card.innerHTML = `
+                            <div class="flex items-center mb-3">
+                                <img src="${item.image}" alt="${item.name}" class="w-12 h-12 rounded-full mr-4 border-2 border-gray-500">
+                                <div>
+                                    <h3 class="font-bold text-lg text-white">${item.name}</h3>
+                                    <span class="text-sm font-semibold px-2 py-0.5 rounded ${partyColor}">${item.party}</span>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-400 mb-2">Topic:</p>
+                            <h4 class="font-semibold text-md text-teal-300">${item.topic}</h4>
+                        `;
+                        resultsGrid.appendChild(card);
+                    });
+                }
+                
+                noResultsDiv.classList.toggle('hidden', filteredContradictions.length > 0);
+                resultsGrid.classList.toggle('hidden', filteredContradictions.length === 0);
+
+                // Render pagination controls
+                renderPagination(filteredContradictions.length);
+            }
+
+            // --- Pagination Rendering ---
+            function renderPagination(totalItems) {
+                paginationControls.innerHTML = '';
+                const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+                if (totalPages <= 1) return;
+
+                // Previous Button
+                const prevButton = document.createElement('button');
+                prevButton.textContent = '« Prev';
+                prevButton.className = 'pagination-btn px-4 py-2 bg-gray-700 rounded-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed';
+                prevButton.disabled = currentPage === 1;
+                prevButton.addEventListener('click', () => {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        render();
+                    }
+                });
+                paginationControls.appendChild(prevButton);
+
+                // Page numbers
+                for (let i = 1; i <= totalPages; i++) {
+                    const pageButton = document.createElement('button');
+                    pageButton.textContent = i;
+                    pageButton.className = 'pagination-btn px-4 py-2 bg-gray-700 rounded-md hover:bg-gray-600';
+                    if (i === currentPage) {
+                        pageButton.classList.add('active');
+                    }
+                    pageButton.addEventListener('click', () => {
+                        currentPage = i;
+                        render();
+                    });
+                    paginationControls.appendChild(pageButton);
+                }
+
+                // Next Button
+                const nextButton = document.createElement('button');
+                nextButton.textContent = 'Next »';
+                nextButton.className = 'pagination-btn px-4 py-2 bg-gray-700 rounded-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed';
+                nextButton.disabled = currentPage === totalPages;
+                nextButton.addEventListener('click', () => {
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        render();
+                    }
+                });
+                paginationControls.appendChild(nextButton);
+            }
+
+            // --- Modal Functions ---
+            function showModal(politicianId, contradictionIndex) {
+                const politician = mockData.find(p => p.id == politicianId);
+                if (!politician) return;
+                const contradiction = politician.contradictions[contradictionIndex];
+                if (!contradiction) return;
+
+                let partyColor = 'text-gray-400';
+                if (politician.party === 'Democrat') partyColor = 'text-blue-400';
+                if (politician.party === 'Republican') partyColor = 'text-red-400';
+                if (politician.party === 'Independent') partyColor = 'text-purple-400';
+                
+                modalContent.innerHTML = `
+                    <div class="p-6 md:p-8">
+                        <div class="flex justify-between items-start mb-6">
+                            <div class="flex items-center">
+                                <img src="${politician.image}" alt="${politician.name}" class="w-16 h-16 rounded-full mr-4 border-2 border-gray-600">
+                                <div>
+                                    <h2 class="text-2xl font-bold text-white">${politician.name}</h2>
+                                    <p class="text-lg font-semibold ${partyColor}">${politician.party}</p>
+                                </div>
+                            </div>
+                            <button id="close-modal" class="text-gray-400 hover:text-white text-3xl">&times;</button>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div>
+                                <h3 class="text-xl font-semibold text-teal-300 mb-3">Topic: ${contradiction.topic}</h3>
+                            </div>
+
+                            <!-- Statement Block -->
+                            <div class="statement-block p-4 bg-gray-900 rounded-r-lg">
+                                <h4 class="text-lg font-semibold text-gray-300 mb-2">The Statement</h4>
+                                <p class="text-gray-300 italic">"${contradiction.statement}"</p>
+                                <div class="text-xs text-gray-500 mt-3">
+                                    <span>Date: ${contradiction.statementDate}</span> | 
+                                    <a href="https://${contradiction.statementSource}" target="_blank" class="hover:text-blue-400 underline">Source</a>
+                                </div>
+                            </div>
+
+                            <!-- Arrow Separator -->
+                            <div class="flex justify-center py-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500 h-8 w-8"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+                            </div>
+
+                            <!-- Action Block -->
+                            <div class="action-block p-4 bg-gray-700 rounded-r-lg">
+                                <h4 class="text-lg font-semibold text-gray-300 mb-2">The Contradictory Action/Statement</h4>
+                                <p class="text-gray-300">${contradiction.action}</p>
+                                <div class="text-xs text-gray-500 mt-3">
+                                    <span>Date: ${contradiction.actionDate}</span> | 
+                                    <a href="https://${contradiction.actionSource}" target="_blank" class="hover:text-blue-400 underline">Source</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                modal.classList.remove('hidden');
+                
+                document.getElementById('close-modal').addEventListener('click', hideModal);
+            }
+
+            function hideModal() {
+                modal.classList.add('hidden');
+            }
+
+            // --- Event Listeners ---
+            function setupEventListeners() {
+                searchInput.addEventListener('input', (e) => {
+                    currentFilters.search = e.target.value.toLowerCase();
+                    currentPage = 1;
+                    render();
+                });
+
+                partyFilters.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'BUTTON') {
+                        document.querySelectorAll('.party-btn').forEach(btn => {
+                            btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                            btn.classList.add('bg-gray-600', 'hover:bg-gray-500');
+                        });
+                        e.target.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                        e.target.classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                        
+                        currentFilters.party = e.target.dataset.party;
+                        currentPage = 1;
+                        render();
+                    }
+                });
+                
+                topicFilter.addEventListener('change', (e) => {
+                    currentFilters.topic = e.target.value;
+                    currentPage = 1;
+                    render();
+                });
+
+                resultsGrid.addEventListener('click', (e) => {
+                    const card = e.target.closest('.card-bg');
+                    if (card) {
+                        const { politicianId, contradictionIndex } = card.dataset;
+                        showModal(politicianId, contradictionIndex);
+                    }
+                });
+
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        hideModal();
+                    }
+                });
+
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+                        hideModal();
+                    }
+                });
+            }
+
+            // --- Initial Load ---
+            populateTopics();
+            setupEventListeners();
+            render();
+        });
+    </script>
+</body>
+</html>
